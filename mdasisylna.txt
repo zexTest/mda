@@ -1,0 +1,155 @@
+practical 1:
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from pmdarima import auto_arima
+
+data = pd.read_csv("C:/Users/student/Downloads/Electric_Production.csv",
+                   parse_dates=['DATE'], index_col='DATE')
+
+ts = data['IPG2211A2N']
+
+model = auto_arima(ts)
+forecast = model.predict(n_periods=24)
+
+ts.plot()
+plt.plot(pd.date_range(ts.index[-1], periods=25, freq='M')[1:], forecast, 'r')
+plt.show()
+
+R:
+library(forecast)
+
+electricity_data <- read.csv("C:/Users/student/Downloads/Electric_Production.csv")
+ts_data <- ts(electricity_data$IPG2211A2N, frequency = 12) 
+auto_model <- auto.arima(ts_data)
+summary(auto_model)
+
+forecast_values <- forecast(auto_model, h = 40)
+
+plot(forecast_values, main = "Electricity Production Forecast",
+     xlab = "Date", ylab = "Production")
+
+
+
+Practical 2:
+
+import pandas as pd, numpy as np, matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from pmdarima import auto_arima
+
+df = pd.read_csv('sales_dataset.csv', parse_dates=['Month'], index_col='Month')
+df['Time'] = np.arange(len(df))
+train, test = df.iloc[:-3], df.iloc[-3:]
+
+models = {
+    "LR": LinearRegression(),
+    "RF": RandomForestRegressor(100, random_state=0)
+}
+
+preds = {}
+
+for name, model in models.items():
+    model.fit(train[['Time']], train['Sales'])
+    preds[name] = model.predict(test[['Time']])
+
+arima = auto_arima(train['Sales'])
+preds["ARIMA"] = arima.predict(n_periods=3)
+
+results = test.copy()
+for k,v in preds.items(): results[k] = v
+
+eval_df = pd.DataFrame({
+    k: [mean_absolute_error(test['Sales'], v),
+        np.sqrt(mean_squared_error(test['Sales'], v))]
+    for k,v in preds.items()
+}, index=['MAE','RMSE']).T
+
+print("\nModel Performance:\n", eval_df)
+
+df['Sales'].plot(marker='o', label='Actual')
+results.drop(columns=['Sales']).plot(marker='x')
+plt.legend(); plt.show()
+
+print("\nPredictions:\n", results)
+
+
+practical 3:
+topic modelling: 
+
+library(tidytext); library(dplyr); library(topicmodels); library(readr)
+
+files <- list.files("C:/Users/student/Downloads/business","*.txt", full.names=TRUE)
+
+data <- tibble(text = sapply(files, read_file), doc = basename(files))
+
+dtm <- data |>
+  unnest_tokens(word, text) |>
+  anti_join(stop_words) |>
+  count(doc, word) |>
+  cast_dtm(doc, word, n)
+
+lda <- LDA(dtm, k=3)
+
+tidy(lda, matrix="beta")
+
+
+
+sentiment analysis:
+
+library(tidytext); library(dplyr); library(wordcloud)
+library(RColorBrewer); library(syuzhet); library(readr)
+
+tweets <- read_csv("C:/Users/student/Downloads/tweets.csv")$text
+
+# Word frequency (no tm needed)
+words <- tibble(text = tweets) |>
+  unnest_tokens(word, text) |>
+  anti_join(stop_words) |>
+  count(word, sort=TRUE)
+
+# Wordcloud
+wordcloud(words$word, words$n, max.words=150, min.freq=5,
+          colors=brewer.pal(8,'Dark2'))
+
+# Sentiment
+s <- get_nrc_sentiment(tweets)
+barplot(colSums(s), col=rainbow(10), las=2)
+
+
+pratical 4 : machine learning for text analysis:
+
+import nltk
+from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer, TweetTokenizer
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+from nltk.corpus import wordnet
+
+nltk.download('punkt'); nltk.download('wordnet'); nltk.download('averaged_perceptron_tagger')
+
+text = input("Enter Text:\n")
+
+# Tokenization
+sents = sent_tokenize(text)
+words = word_tokenize(text)
+
+print("\nSentences:", sents)
+print("\nWords:", words)
+print("\nRegex:", RegexpTokenizer(r'\w+').tokenize(text))
+print("\nTweet:", TweetTokenizer().tokenize(text))
+
+# Stemming & Lemmatization
+stem = PorterStemmer().stem
+lemma = WordNetLemmatizer().lemmatize
+
+print("\nStemming:", [stem(w) for w in words])
+print("\nLemmatization:", [lemma(w) for w in words])
+
+# POS-based Lemmatization (optimized)
+pos_tags = nltk.pos_tag(words)
+pos_map = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
+
+lem_pos = [lemma(w, pos_map.get(t[0], wordnet.NOUN)) for w, t in pos_tags]
+print("\nLemmatization with POS:", lem_pos)
+
+
