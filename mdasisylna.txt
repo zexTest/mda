@@ -1,155 +1,211 @@
-practical 1:
-
+ARIMA IN PYTHON
 import pandas as pd
+from statsmodels.tsa.arima.model import ARIMA
 import matplotlib.pyplot as plt
-from pmdarima import auto_arima
 
-data = pd.read_csv("C:/Users/student/Downloads/Electric_Production.csv",
-                   parse_dates=['DATE'], index_col='DATE')
+# load data
+df = pd.read_csv(input())
+df.columns = ["Date", "Value"]
+df["Date"] = pd.to_datetime(df["Date"])
+ts = df.set_index("Date")["Value"]
 
-ts = data['IPG2211A2N']
+# model
+model = ARIMA(ts, order=(1,1,1)).fit()
 
-model = auto_arima(ts)
-forecast = model.predict(n_periods=24)
+# forecast
+f = model.forecast(10)
+print(f)
 
-ts.plot()
-plt.plot(pd.date_range(ts.index[-1], periods=25, freq='M')[1:], forecast, 'r')
+# plot
+plt.plot(ts)
+plt.plot(f)
 plt.show()
 
-R:
+
+
+
+
+ARIMA TO CALCULATE P,D,Q
 library(forecast)
 
-electricity_data <- read.csv("C:/Users/student/Downloads/Electric_Production.csv")
-ts_data <- ts(electricity_data$IPG2211A2N, frequency = 12) 
-auto_model <- auto.arima(ts_data)
-summary(auto_model)
+data <- read.csv(file.choose())
+ts_data <- ts(data$Value, 365)
 
-forecast_values <- forecast(auto_model, h = 40)
+model <- auto.arima(ts_data)
+f <- forecast(model, 20)
 
-plot(forecast_values, main = "Electricity Production Forecast",
-     xlab = "Date", ylab = "Production")
-
+print(f)
+plot(f)
 
 
-Practical 2:
 
-import pandas as pd, numpy as np, matplotlib.pyplot as plt
+
+
+LINEAR REGRESSION
+import pandas as pd
+import numpy as np
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-from pmdarima import auto_arima
+from sklearn.metrics import mean_squared_error
 
-df = pd.read_csv('sales_dataset.csv', parse_dates=['Month'], index_col='Month')
-df['Time'] = np.arange(len(df))
-train, test = df.iloc[:-3], df.iloc[-3:]
+# load
+df = pd.read_csv("data.csv")
+y = df.iloc[:,1]
 
-models = {
-    "LR": LinearRegression(),
-    "RF": RandomForestRegressor(100, random_state=0)
-}
+# split
+n = int(0.8 * len(y))
+x_train = np.arange(n).reshape(-1,1)
+x_test = np.arange(n, len(y)).reshape(-1,1)
 
-preds = {}
+y_train = y[:n]
+y_test = y[n:]
 
-for name, model in models.items():
-    model.fit(train[['Time']], train['Sales'])
-    preds[name] = model.predict(test[['Time']])
+# model
+model = LinearRegression().fit(x_train, y_train)
+pred = model.predict(x_test)
 
-arima = auto_arima(train['Sales'])
-preds["ARIMA"] = arima.predict(n_periods=3)
-
-results = test.copy()
-for k,v in preds.items(): results[k] = v
-
-eval_df = pd.DataFrame({
-    k: [mean_absolute_error(test['Sales'], v),
-        np.sqrt(mean_squared_error(test['Sales'], v))]
-    for k,v in preds.items()
-}, index=['MAE','RMSE']).T
-
-print("\nModel Performance:\n", eval_df)
-
-df['Sales'].plot(marker='o', label='Actual')
-results.drop(columns=['Sales']).plot(marker='x')
-plt.legend(); plt.show()
-
-print("\nPredictions:\n", results)
+# evaluation
+print("MSE:", mean_squared_error(y_test, pred))
 
 
-practical 3:
-topic modelling: 
 
-library(tidytext); library(dplyr); library(topicmodels); library(readr)
 
-files <- list.files("C:/Users/student/Downloads/business","*.txt", full.names=TRUE)
+LDA ON OWN CORPUS
+library(tm)
+library(topicmodels)
 
-data <- tibble(text = sapply(files, read_file), doc = basename(files))
+files <- list.files(pattern="*.txt")
+text <- lapply(files, readLines)
 
-dtm <- data |>
-  unnest_tokens(word, text) |>
-  anti_join(stop_words) |>
-  count(doc, word) |>
-  cast_dtm(doc, word, n)
+corp <- Corpus(VectorSource(text))
+corp <- tm_map(corp, content_transformer(tolower))
+corp <- tm_map(corp, removeWords, stopwords("english"))
+corp <- tm_map(corp, removePunctuation)
+
+dtm <- DocumentTermMatrix(corp)
 
 lda <- LDA(dtm, k=3)
 
-tidy(lda, matrix="beta")
+terms(lda, 5)
 
 
 
-sentiment analysis:
 
-library(tidytext); library(dplyr); library(wordcloud)
-library(RColorBrewer); library(syuzhet); library(readr)
 
-tweets <- read_csv("C:/Users/student/Downloads/tweets.csv")$text
+SENTIMENT ANALYSIS
+library(syuzhet)
 
-# Word frequency (no tm needed)
-words <- tibble(text = tweets) |>
-  unnest_tokens(word, text) |>
-  anti_join(stop_words) |>
-  count(word, sort=TRUE)
+data <- read.csv("weather.csv")
+tweets <- data$tweet_text
 
-# Wordcloud
-wordcloud(words$word, words$n, max.words=150, min.freq=5,
-          colors=brewer.pal(8,'Dark2'))
-
-# Sentiment
 s <- get_nrc_sentiment(tweets)
-barplot(colSums(s), col=rainbow(10), las=2)
+
+barplot(colSums(s))
 
 
-pratical 4 : machine learning for text analysis:
-
-import nltk
-from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer, TweetTokenizer
-from nltk.stem import PorterStemmer, WordNetLemmatizer
-from nltk.corpus import wordnet
-
-nltk.download('punkt'); nltk.download('wordnet'); nltk.download('averaged_perceptron_tagger')
-
-text = input("Enter Text:\n")
-
-# Tokenization
-sents = sent_tokenize(text)
-words = word_tokenize(text)
-
-print("\nSentences:", sents)
-print("\nWords:", words)
-print("\nRegex:", RegexpTokenizer(r'\w+').tokenize(text))
-print("\nTweet:", TweetTokenizer().tokenize(text))
-
-# Stemming & Lemmatization
-stem = PorterStemmer().stem
-lemma = WordNetLemmatizer().lemmatize
-
-print("\nStemming:", [stem(w) for w in words])
-print("\nLemmatization:", [lemma(w) for w in words])
-
-# POS-based Lemmatization (optimized)
-pos_tags = nltk.pos_tag(words)
-pos_map = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
-
-lem_pos = [lemma(w, pos_map.get(t[0], wordnet.NOUN)) for w, t in pos_tags]
-print("\nLemmatization with POS:", lem_pos)
 
 
+
+CLASSIFYING SMS BASED ON SPAM AND HAM
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import LogisticRegression
+
+# load data
+df = pd.read_csv("spam.csv", encoding="latin-1")[["v1","v2"]]
+df.columns = ["label","text"]
+
+# split
+X_train, X_test, y_train, y_test = train_test_split(df["text"], df["label"], test_size=0.3)
+
+# convert text → numbers
+cv = CountVectorizer()
+X_train = cv.fit_transform(X_train)
+X_test = cv.transform(X_test)
+
+# model
+model = LogisticRegression().fit(X_train, y_train)
+
+# prediction
+pred = model.predict(X_test)
+
+print(pred)
+
+
+
+
+
+
+
+ARTIFICIAL NEURAL NETWORK
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import normalize
+from keras.models import Sequential
+from keras.layers import Dense
+
+# load
+df = pd.read_csv("data.csv")
+X = df.iloc[:,:-1]
+y = df.iloc[:,-1]
+
+# split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# normalize
+X_train = normalize(X_train)
+X_test = normalize(X_test)
+
+# model
+model = Sequential()
+model.add(Dense(10, input_dim=X_train.shape[1], activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# train
+model.fit(X_train, y_train, epochs=10)
+
+# evaluate
+print(model.evaluate(X_test, y_test))
+
+
+
+
+
+ANN IMPROVED ACCURACY
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from keras.models import Sequential
+from keras.layers import Dense
+
+# load
+df = pd.read_csv("data.csv")
+
+# convert target
+df['chd'] = df['chd'].map({'Si':1,'No':0})
+
+X = df.iloc[:,:-1]
+y = df['chd']
+
+# split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# scale
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# model
+model = Sequential()
+model.add(Dense(10, input_dim=X_train.shape[1], activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# train
+model.fit(X_train, y_train, epochs=20, batch_size=8)
+
+# test
+print(model.evaluate(X_test, y_test))
