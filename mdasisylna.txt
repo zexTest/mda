@@ -209,3 +209,121 @@ model.fit(X_train, y_train, epochs=20, batch_size=8)
 
 # test
 print(model.evaluate(X_test, y_test))
+
+
+
+RSTUDIO:
+
+sentiment analysis R:
+
+# Install once (comment after first run)
+# install.packages(c("tidyverse", "tidytext", "wordcloud", "RColorBrewer", "syuzhet"))
+
+library(tidyverse)
+library(tidytext)
+library(wordcloud)
+library(RColorBrewer)
+library(syuzhet)
+
+# Load dataset
+weatherdata <- read.csv("C:\\Users\\student\\Downloads\\weather (1).csv")
+
+# Clean text
+tweets <- weatherdata$tweet_text %>%
+  iconv(to = "utf-8") %>%
+  tolower()
+
+# Tokenize + remove stopwords
+tidy_words <- tibble(text = tweets) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+# Word frequency
+word_freq <- tidy_words %>%
+  count(word, sort = TRUE)
+
+# Wordcloud
+set.seed(222)
+wordcloud(words = word_freq$word,
+          freq = word_freq$n,
+          max.words = 150,
+          min.freq = 5,
+          colors = brewer.pal(8, "Dark2"))
+
+# Sentiment analysis (NRC)
+sentiment <- get_nrc_sentiment(tweets)
+
+# Plot sentiment
+barplot(colSums(sentiment),
+        las = 2,
+        col = rainbow(10),
+        ylab = "count",
+        main = "Sentiments for weather")
+
+
+MONGODB:
+mongodb commands
+
+db.users.insertOne({ name: "Preshit", email: "preshit@gmail.com" })
+
+db.movies.insertOne({ title: "Inception", genre: "Sci-Fi", duration: 148 })
+
+var movie = db.movies.findOne({ title: "Inception" })
+
+db.shows.insertOne({
+  movie_id: movie._id,
+  theater: "PVR",
+  city: "Mumbai",
+  show_time: new Date(),
+  price: 300,
+  seats_available: 100
+})
+
+var show = db.shows.findOne({})
+
+var user = db.users.findOne({})
+
+db.bookings.insertOne({
+  user_id: user._id,
+  show_id: show._id,
+  seats_booked: 2,
+  total_amount: 600,
+  booking_time: new Date()
+})
+
+find: 
+db.movies.find()
+db.shows.find({ city: "Mumbai" })
+
+update:
+db.shows.updateOne(
+  { _id: show._id },
+  { $inc: { seats_available: -2 } }
+)
+
+
+analytical query:
+
+db.bookings.aggregate([
+  { $lookup: { from: "shows", localField: "show_id", foreignField: "_id", as: "show" }},
+  { $unwind: "$show" },
+  { $group: { _id: "$show.movie_id", revenue: { $sum: "$total_amount" }}}
+])
+
+db.bookings.aggregate([
+  { $lookup: { from: "shows", localField: "show_id", foreignField: "_id", as: "show" }},
+  { $unwind: "$show" },
+  { $group: { _id: "$show.movie_id", count: { $sum: 1 }}},
+  { $sort: { count: -1 }},
+  { $limit: 1 }
+])
+
+db.bookings.aggregate([
+  { $group: { _id: "$show_id", total_seats: { $sum: "$seats_booked" }}}
+])
+
+db.bookings.aggregate([
+  { $group: { _id: "$user_id", spent: { $sum: "$total_amount" }}},
+  { $sort: { spent: -1 }},
+  { $limit: 5 }
+])
